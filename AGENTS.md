@@ -52,6 +52,13 @@ Important requirements:
 
 The initial version may support a single bank statement format. Design the code so that additional bank formats can be supported later without rewriting the entire application.
 
+Other requirements, during development:
+
+- Do not log bank statement contents or transaction data to the console.
+- Use synthetic or anonymized data in examples and tests.
+- Do not commit real bank statements, personal information, or sensitive financial data to the repository.
+- Bundle application dependencies locally when needed; do not load PDF processing resources from third-party CDNs without explicit approval.
+
 ## 5. Project Structure
 
 Respect the existing project organization:
@@ -61,7 +68,6 @@ AEB/
 ├── docs/
 ├── public/
 ├── src/
-│   ├── assets/
 │   ├── components/
 │   ├── services/
 │   ├── styles/
@@ -110,9 +116,16 @@ Pay special attention to:
 - Duplicate transactions.
 - Missing or malformed values.
 
-Avoid floating-point arithmetic errors in monetary calculations. Prefer integer values in cents or another explicitly justified decimal-safe approach.
+Do not automatically remove transactions solely because their dates, descriptions, or amounts match. Flag possible duplicates for user review unless a bank-specific rule can reliably identify them.
 
-Never silently discard transactions that cannot be classified. Make such cases visible for review.
+Avoid floating-point arithmetic errors in monetary calculations. Represent monetary amounts as integer cents and validate them before calculation.
+
+Treat transaction dates as calendar dates, without timezone conversion. Validate that the start date is not after the end date.
+Include both boundary dates in the selected range.
+
+If transaction data cannot be reliably extracted, interpreted, or classified, clearly warn the user that the results may be incomplete or inaccurate.
+Do not present uncertain totals as definitive.
+When possible, show the affected items for review.
 
 ## 8. PDF Processing
 
@@ -175,9 +188,15 @@ npm run build
 
 to generate the production build.
 
-Do not assume that a successful Vite build alone guarantees that all TypeScript types have been checked. Add or use a separate TypeScript validation command when appropriate.
+The `build` script currently runs `tsc` before `vite build`, so it
+checks TypeScript types before generating the production build.
+If the build script or TypeScript configuration changes, ensure that type checking remains part of the validation process.
 
 The production output must be suitable for deployment to ordinary shared hosting as static files.
+
+Add automated tests for financial calculations and bank-specific parsing rules as those features are implemented.
+Cover date boundaries, monetary parsing, malformed data, and possible duplicate transactions.
+Use synthetic test data. Explain any new testing dependency before adding it.
 
 ## 11. Working with Codex
 

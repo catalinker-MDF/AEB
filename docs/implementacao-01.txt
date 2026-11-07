@@ -1,0 +1,36 @@
+Implementada a primeira versão funcional do AEB para extratos Pix do Itaú.
+
+Principais entregas:
+
+- Leitura local de PDFs com pdfjs-dist, incluindo worker empacotado pelo Vite — sem CDN, backend ou persistência.
+- Interpretador separado que reconstrói linhas pela posição dos itens extraídos (data, descrição e valor), conforme a estrutura do PDF de referência.
+- Valores tratados em centavos inteiros; positivos são entradas e negativos são saídas.
+- Filtro inclusivo por datas, totais e tabela de lançamentos.
+- Avisos para formato não reconhecido, PDFs sem texto, erro de leitura, linhas não interpretadas e possíveis duplicidades (mantidas).
+- Interface responsiva em pt-BR e sem logs de dados financeiros.
+- Testes automatizados sem framework adicional: node:test com @types/node apenas para tipagem.
+
+Arquivos principais:
+
+- Componente da aplicação (src/components/app.ts)
+- Extração local com PDF.js (src/services/pdf-extractor.ts)
+- Interpretador Itaú Pix (src/services/itau-pix-parser.ts)
+- Cálculos e moeda (src/services/transaction-calculations.ts)
+- Testes (tests/itau-pix-parser.test.ts)
+- Decisões técnicas (docs/decisoes-tecnicas.md)
+
+Validação concluída:
+
+npm test
+npm run build
+
+Os 5 testes passaram e o build de produção foi gerado. A interpretação também foi validada localmente contra o PDF de referência, sem exibir ou registrar lançamentos.
+
+Para testar manualmente:
+
+npm run dev
+
+Depois, abra o endereço informado pelo Vite e selecione um PDF de extrato Pix do Itaú.
+
+Limitações atuais: suporte restrito ao layout Pix do Itaú usado como referência e a PDFs com texto extraível; documentos escaneados, protegidos ou com layout significativamente diferente não são suportados. A alteração pré-existente em AGENTS.md foi preservada.
+  Worked for 17m 11s • 5:39 PM

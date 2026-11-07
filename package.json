@@ -6,10 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "tsc -p tsconfig.test.json && node --test .test-output/tests/*.test.js"
   },
   "devDependencies": {
+    "@types/node": "^26.6.6",
     "typescript": "~7.0.2",
     "vite": "^8.3.6"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^6.5.438"
   }
 }
