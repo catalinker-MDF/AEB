@@ -1,4 +1,4 @@
-import { formatDate } from '../services/date.js'
+import { formatDate, isDateRangeValid, parseBrazilianDate } from '../services/date.js'
 import { formatCurrency } from '../services/money.js'
 import { extractPdfText } from '../services/pdf-extractor.js'
 import { parseItauPixStatement } from '../services/itau-pix-parser.js'
@@ -52,8 +52,8 @@ export function renderApp(app: HTMLDivElement): void {
       <section id="analysis-section" class="card is-hidden" aria-labelledby="period-title">
         <h2 id="period-title">2. Selecione o período</h2>
         <div class="date-fields">
-          <label>Data inicial <input id="start-date" type="date" required /></label>
-          <label>Data final <input id="end-date" type="date" required /></label>
+          <label>Data inicial <input id="start-date" type="text" inputmode="numeric" autocomplete="off" placeholder="DD/MM/AAAA" maxlength="10" required /></label>
+          <label>Data final <input id="end-date" type="text" inputmode="numeric" autocomplete="off" placeholder="DD/MM/AAAA" maxlength="10" required /></label>
         </div>
         <p id="date-message" class="message" aria-live="polite"></p>
         <div id="warnings" class="warnings"></div>
@@ -84,14 +84,22 @@ export function renderApp(app: HTMLDivElement): void {
     const parsedStatement = state.parsedStatement
     if (!parsedStatement) return
 
-    const initialDate = startDate.value
-    const finalDate = endDate.value
-    if (!initialDate || !finalDate) {
+    const initialDateValue = startDate.value.trim()
+    const finalDateValue = endDate.value.trim()
+    if (!initialDateValue || !finalDateValue) {
       dateMessage.textContent = 'Informe as duas datas para calcular o período.'
       results.innerHTML = ''
       return
     }
-    if (initialDate > finalDate) {
+
+    const initialDate = parseBrazilianDate(initialDateValue)
+    const finalDate = parseBrazilianDate(finalDateValue)
+    if (!initialDate || !finalDate) {
+      dateMessage.textContent = 'Informe datas válidas no formato DD/MM/AAAA.'
+      results.innerHTML = ''
+      return
+    }
+    if (!isDateRangeValid(initialDate, finalDate)) {
       dateMessage.textContent = 'A data inicial não pode ser posterior à data final.'
       results.innerHTML = ''
       return
@@ -148,8 +156,8 @@ export function renderApp(app: HTMLDivElement): void {
       state.parsedStatement = parsedStatement
       const bounds = getDateBounds(parsedStatement)
       if (!bounds) return
-      startDate.value = bounds.min
-      endDate.value = bounds.max
+      startDate.value = formatDate(bounds.min)
+      endDate.value = formatDate(bounds.max)
       analysisSection.classList.remove('is-hidden')
       uploadMessage.textContent = `${parsedStatement.transactions.length} lançamento(s) identificado(s).`
       renderWarnings(parsedStatement)

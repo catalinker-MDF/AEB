@@ -19,3 +19,7 @@ export function formatDate(date: string): string {
   const [year, month, day] = date.split('-')
   return `${day}/${month}/${year}`
 }
+
+export function isDateRangeValid(startDate: string, endDate: string): boolean {
+  return startDate <= endDate
+}
