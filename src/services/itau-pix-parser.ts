@@ -7,8 +7,19 @@ interface VisualRow {
   items: ExtractionTextItem[]
 }
 
-const dateColumnEnd = 85
-const amountColumnStart = 510
+interface StatementLayout {
+  idPrefix: string
+  dateColumnEnd: number
+  amountColumnStart: number
+  amountColumnEnd: number
+}
+
+const pixStatementLayout: StatementLayout = {
+  idPrefix: 'itau-pix',
+  dateColumnEnd: 85,
+  amountColumnStart: 510,
+  amountColumnEnd: Number.POSITIVE_INFINITY,
+}
 
 function groupRows(items: ExtractionTextItem[]): VisualRow[] {
   const rows: VisualRow[] = []
@@ -23,16 +34,41 @@ function groupRows(items: ExtractionTextItem[]): VisualRow[] {
   return rows.map((row) => ({ ...row, items: row.items.sort((first, second) => first.x - second.x) }))
 }
 
-function createTransactionId(pageNumber: number, rowIndex: number): string {
-  return `itau-pix-${pageNumber}-${rowIndex}`
+function createTransactionId(layout: StatementLayout, pageNumber: number, rowIndex: number): string {
+  return `${layout.idPrefix}-${pageNumber}-${rowIndex}`
 }
 
-function hasPixStatementHeading(pages: ExtractedPdfPage[]): boolean {
-  return pages.some((page) => page.items.some((item) => /extrato\s+pix\s*\/\s*lançamentos/i.test(item.text)))
+function findCurrentAccountLayout(pages: ExtractedPdfPage[]): StatementLayout | null {
+  for (const page of pages) {
+    const hasCurrentAccountHeading = page.items.some((item) => /extrato\s+conta\s+corrente/i.test(item.text))
+    const valueHeading = page.items.find((item) => /^valor\s*\(r\$\)$/i.test(item.text.trim()))
+
+    if (!hasCurrentAccountHeading || !valueHeading) continue
+
+    const balanceHeading = page.items.find((item) => /^saldo\s*\(r\$\)$/i.test(item.text.trim()))
+    return {
+      idPrefix: 'itau-current-account',
+      dateColumnEnd: 85,
+      // Os valores são alinhados à direita e podem começar antes do título da coluna.
+      amountColumnStart: valueHeading.x - 30,
+      amountColumnEnd: balanceHeading ? balanceHeading.x - 10 : Number.POSITIVE_INFINITY,
+    }
+  }
+
+  return null
+}
+
+function detectStatementLayout(pages: ExtractedPdfPage[]): StatementLayout | null {
+  if (pages.some((page) => page.items.some((item) => /extrato\s+pix\s*\/\s*lançamentos/i.test(item.text)))) {
+    return pixStatementLayout
+  }
+
+  return findCurrentAccountLayout(pages)
 }
 
 export function parseItauPixStatement(pages: ExtractedPdfPage[]): StatementParseResult {
-  if (!hasPixStatementHeading(pages)) {
+  const layout = detectStatementLayout(pages)
+  if (!layout) {
     return { isRecognized: false, transactions: [], warnings: [], unparsedRows: [] }
   }
 
@@ -42,16 +78,16 @@ export function parseItauPixStatement(pages: ExtractedPdfPage[]): StatementParse
   for (const page of pages) {
     const rows = groupRows(page.items)
     for (const [rowIndex, row] of rows.entries()) {
-      const dateItem = row.items.find((item) => item.x < dateColumnEnd && /^\d{2}\/\d{2}\/\d{4}$/.test(item.text.trim()))
+      const dateItem = row.items.find((item) => item.x < layout.dateColumnEnd && /^\d{2}\/\d{2}\/\d{4}$/.test(item.text.trim()))
       if (!dateItem) continue
 
       const description = row.items
-        .filter((item) => item.x >= dateColumnEnd && item.x < amountColumnStart)
+        .filter((item) => item.x >= layout.dateColumnEnd && item.x < layout.amountColumnStart)
         .map((item) => item.text.trim())
         .join(' ')
         .trim()
       const amountText = row.items
-        .filter((item) => item.x >= amountColumnStart)
+        .filter((item) => item.x >= layout.amountColumnStart && item.x < layout.amountColumnEnd)
         .map((item) => item.text.trim())
         .join('')
       const date = parseBrazilianDate(dateItem.text)
@@ -63,7 +99,7 @@ export function parseItauPixStatement(pages: ExtractedPdfPage[]): StatementParse
       }
 
       transactions.push({
-        id: createTransactionId(page.pageNumber, rowIndex),
+        id: createTransactionId(layout, page.pageNumber, rowIndex),
         date,
         description,
         amountInCents,

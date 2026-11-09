@@ -16,6 +16,27 @@ function pageWithRows(rows: Array<[string, string, string]>): ExtractedPdfPage {
   }
 }
 
+function currentAccountPageWithRows(rows: Array<[string, string, string]>, pageNumber = 1): ExtractedPdfPage {
+  return {
+    pageNumber,
+    items: [
+      ...(pageNumber === 1
+        ? [
+            { text: 'extrato conta corrente', x: 28, y: 729 },
+            { text: 'data', x: 32, y: 660 },
+            { text: 'lançamentos', x: 104, y: 660 },
+            { text: 'valor (R$)', x: 420, y: 660 },
+            { text: 'saldo (R$)', x: 520, y: 660 },
+          ]
+        : []),
+      ...rows.flatMap(([date, description, amount], index) => {
+        const y = 620 - index * 18
+        return [{ text: date, x: 32, y }, { text: description, x: 104, y }, { text: amount, x: 430, y }]
+      }),
+    ],
+  }
+}
+
 test('interpreta lançamentos Pix do Itaú a partir de itens posicionados', () => {
   const result = parseItauPixStatement([pageWithRows([
     ['02/10/2026', 'PIX TRANSF Cliente fictício', '1.234,56'],
@@ -39,6 +60,19 @@ test('mantém possíveis duplicidades e sinaliza linhas não interpretadas', () 
   assert.equal(result.transactions.length, 2)
   assert.equal(result.transactions.every((transaction) => transaction.isPossibleDuplicate), true)
   assert.equal(result.unparsedRows.length, 1)
+})
+
+test('interpreta o extrato de conta corrente do Itaú, inclusive páginas sem cabeçalho', () => {
+  const result = parseItauPixStatement([
+    currentAccountPageWithRows([['01/07/2026', 'PIX TRANSF Cliente fictício', '-1.350,00']]),
+    currentAccountPageWithRows([['02/07/2026', 'PIX TRANSF Recebimento fictício', '509,00']], 2),
+  ])
+
+  assert.equal(result.isRecognized, true)
+  assert.deepEqual(result.transactions.map(({ date, amountInCents }) => ({ date, amountInCents })), [
+    { date: '2026-07-01', amountInCents: -135000 },
+    { date: '2026-07-02', amountInCents: 50900 },
+  ])
 })
 
 test('não reconhece outros formatos', () => {

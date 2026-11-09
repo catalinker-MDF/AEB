@@ -35,11 +35,11 @@ export function renderApp(app: HTMLDivElement): void {
       <header class="app-header">
         <p class="eyebrow">AEB</p>
         <h1>Analisador de Extrato Bancário</h1>
-        <p class="subtitle">Analise seu extrato Pix do Itaú diretamente no seu navegador.</p>
+        <p class="subtitle">Analise seu extrato do Itaú diretamente no seu navegador.</p>
       </header>
 
       <section class="card" aria-labelledby="upload-title">
-        <h2 id="upload-title">1. Envie o extrato Pix</h2>
+        <h2 id="upload-title">1. Envie o extrato</h2>
         <p class="hint">O arquivo é processado apenas nesta página e não é enviado nem salvo.</p>
         <label class="file-input" for="statement-file">
           <span>Selecionar PDF</span>
@@ -145,7 +145,7 @@ export function renderApp(app: HTMLDivElement): void {
       const pages = await extractPdfText(file)
       const parsedStatement = parseItauPixStatement(pages)
       if (!parsedStatement.isRecognized) {
-        uploadMessage.textContent = 'Formato não reconhecido. Esta primeira versão aceita apenas extratos Pix do Itaú no formato compatível.'
+        uploadMessage.textContent = 'Formato não reconhecido. Esta versão aceita os formatos compatíveis de extrato Pix e conta corrente do Itaú.'
         return
       }
       if (parsedStatement.transactions.length === 0) {
